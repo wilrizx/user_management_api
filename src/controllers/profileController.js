@@ -26,8 +26,9 @@ export const getProfile = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
     
+    // Pastikan user hanya bisa edit profilnya sendiri
     if (parseInt(req.params.id) !== userId) {
       return res.status(403).json({
         success: false,
@@ -35,12 +36,13 @@ export const updateProfile = async (req, res, next) => {
       });
     }
 
-    let updateData = { name, email };
+    let updateData = { email };
 
+    // Upload avatar jika ada
     if (req.file) {
       try {
         const result = await uploadToCloudinary(req.file.buffer);
-        updateData.profile_picture = result.secure_url;
+        updateData.avatar_uri = result.secure_url;
       } catch (uploadError) {
         return res.status(400).json({
           success: false,
@@ -50,11 +52,13 @@ export const updateProfile = async (req, res, next) => {
       }
     }
 
+    // Update password jika ada
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       await User.updatePassword(userId, hashedPassword);
     }
 
+    // Update profil
     const updatedUser = await User.updateProfile(userId, updateData);
 
     res.status(200).json({
@@ -78,11 +82,11 @@ export const deleteProfilePicture = async (req, res, next) => {
       });
     }
 
-    const updatedUser = await User.updateProfile(userId, { profile_picture: null });
+    const updatedUser = await User.updateProfile(userId, { avatar_uri: null });
 
     res.status(200).json({
       success: true,
-      message: 'Foto profil berhasil dihapus',
+      message: 'Avatar berhasil dihapus',
       data: updatedUser
     });
   } catch (error) {

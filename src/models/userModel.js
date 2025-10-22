@@ -1,18 +1,18 @@
-import pool from '../config/database.js';
+import pool from '../config/db.js';
 
 class User {
   static async create(userData) {
     const {
-      name,
       email,
-      password
+      password,
+      role = 'user'
     } = userData;
     const query = `
-      INSERT INTO users (email, password, role, avatar_url)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, email, password, created_at
+      INSERT INTO users (email, password, role)
+      VALUES ($1, $2, $3)
+      RETURNING id, email, role
     `;
-    const values = [email, password, avatar_url];
+    const values = [email, password, role];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
@@ -24,27 +24,24 @@ class User {
   }
 
   static async findById(id) {
-    const query = 'SELECT id, email, avatar_url, created_at, updated_at FROM users WHERE id = $1';
+    const query = 'SELECT id, email, role, avatar_uri FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0];
   }
 
   static async updateProfile(id, updateData) {
     const {
-      name,
       email,
-      profile_picture
+      avatar_uri
     } = updateData;
     const query = `
       UPDATE users 
-      SET name = COALESCE($1, name),
-          email = COALESCE($2, email),
-          profile_picture = COALESCE($3, profile_picture),
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $4
-      RETURNING id, name, email, profile_picture, updated_at
+      SET email = COALESCE($1, email),
+          avatar_uri = COALESCE($2, avatar_uri)
+      WHERE id = $3
+      RETURNING id, email, role, avatar_uri
     `;
-    const values = [name, email, profile_picture, id];
+    const values = [email, avatar_uri, id];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
@@ -52,7 +49,7 @@ class User {
   static async updatePassword(id, hashedPassword) {
     const query = `
       UPDATE users 
-      SET password = $1, updated_at = CURRENT_TIMESTAMP
+      SET password = $1
       WHERE id = $2
       RETURNING id
     `;
